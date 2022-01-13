@@ -1,7 +1,14 @@
 import React from "react";
-import { Button } from '@cmsgov/design-system';
+import { Button, Table, TableBody, TableRow, TableCell, TableHead } from '@cmsgov/design-system';
+import { prependListener } from "process";
 
-function calculateWinner(squares: (string | null)[]) {
+const BOARD_SIZE = 9;
+const BOARD_ROWS = 3;
+const BOARD_COLUMNS = 3;
+
+type Squares = (string | null)[]
+
+function calculateWinner(squares: Squares) {
     const lines = [
         [0, 1, 2],
         [3, 4, 5],
@@ -20,8 +27,6 @@ function calculateWinner(squares: (string | null)[]) {
     }
     return null;
 }
-
-type Squares = (string | null)[]
 
 type SquareProps = {
     value: string | null,
@@ -90,11 +95,11 @@ function Board(props: BoardProps) {
 }
 
 type History = {
-    squares: (string | null)[]
+    squares: (string | null)[],
 }[]
 
 export default function Game() {
-    const [history, setHistory] = React.useState<History>([{ squares: Array(9).fill(null) }]);
+    const [history, setHistory] = React.useState<History>([{ squares: Array(BOARD_SIZE).fill(null) }]);
     const [nextIndicator, setNextIndicator] = React.useState<string>('X');
     const [stepNumber, setStepNumber] = React.useState<number>(0);
     const squares = history[stepNumber].squares;
@@ -126,14 +131,38 @@ export default function Game() {
         switchIndicator(move)
     }
 
-    const moves = history.map((step, move) => {
-        const desc = move ?
-            'Go to move #' + move :
-            'Go to game start';
+    const moves = history.map((historyItem, move) => {
+        const desc = move ? move : 'Start';
+        const previousHistoryItem = history[move - 1];
+        let moveIndex;
+
+        if (previousHistoryItem) {
+            for (let i = 0; i < BOARD_SIZE; i++) {
+                if (previousHistoryItem.squares[i] !== historyItem.squares[i]) {
+                    moveIndex = i;
+                    break;
+                }
+            }
+        } else {
+            for (let i = 0; i < BOARD_SIZE; i++) {
+                if (historyItem.squares[i] != null) {
+                    moveIndex = i;
+                    break;
+                }
+            }
+        }
+
+        const rowIndex = typeof moveIndex === 'number' ? Math.floor(moveIndex / BOARD_COLUMNS) : '';
+        const colIndex = typeof moveIndex === 'number' ? moveIndex % BOARD_ROWS : '';
+        const locationDisplay = typeof moveIndex === 'number' ? `(${rowIndex}, ${colIndex})` : '';
+        const playerSymbol = typeof moveIndex === 'number' ? historyItem.squares[moveIndex] : '';
+
         return (
-            <li key={move}>
-                <Button onClick={() => jumpTo(move)}>{desc}</Button>
-            </li>
+            <TableRow key={move}>
+                <TableCell>{locationDisplay}</TableCell>
+                <TableCell>{playerSymbol}</TableCell>
+                <TableCell><Button onClick={() => jumpTo(move)}>{desc}</Button></TableCell>
+            </TableRow>
         );
     });
 
@@ -148,7 +177,18 @@ export default function Game() {
             </div>
             <div className="game-info">
                 <div>{status}</div>
-                <ol>{moves}</ol>
+                <Table borderless>
+                    <TableHead>
+                        <TableRow>
+                            <TableCell>Move Location</TableCell>
+                            <TableCell>Player Symbol</TableCell>
+                            <TableCell>Return</TableCell>
+                        </TableRow>
+                    </TableHead>
+                    <TableBody>
+                        {moves}
+                    </TableBody>
+                </Table>
             </div>
         </div>
     );
